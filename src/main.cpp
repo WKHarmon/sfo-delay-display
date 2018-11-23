@@ -1,5 +1,4 @@
 #include <FastLED.h>
-#include <ArduinoJson.h>
 #include <ESP8266WiFi.h>
 using namespace std;
 
@@ -9,8 +8,8 @@ const char pass[] = "EDITME";    // your network password (use for WPA, or use a
 #define READ_TIMEOUT 15 // Cancel query if no data received (seconds)
 #define WIFI_TIMEOUT 60 // in seconds
 #define RETRY_TIMEOUT 15000 // in ms
-#define REQUEST_INTERVAL 3600000 // in ms (1 hour is 3600000)
-#define BRIGHTNESS_INTERVAL 5000 // interval at which to adjust brightness in ms
+#define REQUEST_INTERVAL 900000 // in ms (15 miunutes is 900000)
+#define BRIGHTNESS_INTERVAL 0 // interval at which to adjust brightness in ms; set to 0 to disable sensor readings
 
 #define FASTLED_ESP8266_RAW_PIN_ORDER
 #define LIGHTSENSORPIN A0 //Ambient light sensor reading 
@@ -24,32 +23,11 @@ const char pass[] = "EDITME";    // your network password (use for WPA, or use a
 #define NUM_LEDS 128
 CRGB leds[NUM_LEDS];
 
-//range is 40 degrees blue, 70 degrees white, 90 degrees red; colors are indexed
-/*DEFINE_GRADIENT_PALETTE( temperature_gradient ) {
-  0,     0,  0,  255,   //blue
-153,   255,  255,  255,   //white
-255,   255, 0, 0 }; //red*/
-
-byte weather_unknown[] = {0b00000000,0b01000010,0b00100100,0b00011000,0b00011000,0b00100100,0b01000010,0b00000000};
-byte weather_clear[] = {0b00010000,0b01010010,0b00111100,0b00111111,0b11111100,0b00111100,0b01001010,0b00001000};
-byte weather_few[] = {0b00010000,0b01010100,0b00111000,0b11111110,0b01000100,0b10000010,0b10000001,0b01111110};
-byte weather_sct[] = {0b00000000,0b00000000,0b00000000,0b00111000,0b01000100,0b10000010,0b10000001,0b01111110};
-byte weather_bkn[] = {0b01100000,0b10011000,0b10000100,0b01111000,0b01000100,0b10000010,0b10000001,0b01111110};
-byte weather_shower[] = {0b00111100,0b01111110,0b11111111,0b11111111,0b10001001,0b00001000,0b00101000,0b00111000};
-byte weather_rain[] = {0b00101010,0b00011100,0b01111111,0b00011100,0b01111010,0b11111100,0b00010000,0b00110000};
-byte weather_thunderstorm[] = {0b00001111,0b00011110,0b00111100,0b01111111,0b11111110,0b00000100,0b00001000,0b00010000};
-byte weather_snow[] = {0b01010010,0b11010011,0b00111100,0b00100111,0b11100100,0b00111100,0b11001011,0b01001010};
-byte weather_mist[] = {0b11111111,0b00000000,0b11111111,0b00000000,0b11111111,0b00000000,0b11111111,0b00000000};
-
 short int temp;
 String conditions;
 
-#define HOST "api.weather.gov"
-#define ALAMEDA_URI "/gridpoints/MTR/94,125/forecast"
-#define SF_URI "/gridpoints/MTR/88,126/forecast"
-
-//const String alameda_url = "http://api.openweathermap.org/data/2.5/forecast?q=Alameda,US&units=imperial&APPID=3e305c0baa0f96824fe116e828f6d292";
-//const String sf_url = "http://api.openweathermap.org/data/2.5/forecast?q=San%20Francisco,US&units=imperial&APPID=3e305c0baa0f96824fe116e828f6d292";
+#define HOST "www.fly.faa.gov"
+#define URI "/flyfaa/xmlAirportStatus.jsp"
 
 unsigned int loop_number = 0;
 
@@ -60,17 +38,17 @@ void setup() {
   while (!Serial) {
     // wait
   }
-  pinMode(LIGHTSENSORPIN, INPUT);
+  if (BRIGHTNESS_INTERVAL > 0) pinMode(LIGHTSENSORPIN, INPUT);
   FastLED.addLeds<LED_TYPE,DATA_PIN,COLOR_ORDER>(leds, NUM_LEDS).setCorrection(TypicalLEDStrip);
   FastLED.setBrightness(MAX_BRIGHTNESS);
   fill_gradient_RGB(leds, NUM_LEDS, CRGB::Blue, CRGB::Red);
   FastLED.show();
 }
 
-void draw(byte city, CRGB color, byte * image){
+void draw(byte digit, CRGB color, byte * image){
   unsigned short int led;
-  if (city == 0) led = 0;
-  else if (city == 1) led = 64;
+  if (digit == 0) led = 0;
+  else if (digit == 1) led = 64;
 
   for (byte i = 0; i < 8; i++) {
     for (byte a = 0; a < 8; a++) {
@@ -80,7 +58,7 @@ void draw(byte city, CRGB color, byte * image){
   }
 }
 
-CRGB getColor(float highTemp) {
+CRGB getColor(float delay) {
   CRGB color;
 
   // FastLED gradients crash the ESP8266 so we have to do it manually. There's probably a math function I'm too lazy to look up.
@@ -88,53 +66,170 @@ CRGB getColor(float highTemp) {
 
   /*CRGBPalette16 temp_palette = temperature_gradient;*/
 
-  if (highTemp <= 40) color = 0x0000FF;
+  if (delay == 0) color = 0x00FF00;
   /*else if (highTemp > 90) color = 0xFF0000;
   else {
     uint8_t colorIndex = ((highTemp - 40) / 50) * 255;
     color = ColorFromPalette(temp_palette, colorIndex);
   }*/
-  else if (highTemp <= 45) color = 0x2A2AFF;
-  else if (highTemp <= 50) color = 0x5555FF;
-  else if (highTemp <= 55) color = 0x7F7FFF;
-  else if (highTemp <= 60) color = 0xAAAAFF;
-  else if (highTemp <= 65) color = 0xD4D4FF;
-  else if (highTemp <= 70) color = 0xFFFFFF;
-  else if (highTemp <= 75) color = 0xFFCCCC;
-  else if (highTemp <= 80) color = 0xFF9999;
-  else if (highTemp <= 85) color = 0xFF6666;
-  else if (highTemp <= 90) color = 0xFF3333;
+  else if (delay <= 10) color = 0x38FF00;
+  else if (delay <= 20) color = 0x71FF00;
+  else if (delay <= 30) color = 0xAAFF00;
+  else if (delay <= 40) color = 0xE2FF00;
+  else if (delay <= 50) color = 0xFFE200;
+  else if (delay <= 60) color = 0xFFE200;
+  else if (delay <= 70) color = 0xFFAA00;
+  else if (delay <= 80) color = 0xFF7100;
+  else if (delay <= 90) color = 0xFF3800;
   else color = 0xFF0000;
   return color;
 }
 
-void doLEDs(unsigned short int city) {
-  byte * image;
-  image = weather_unknown;
+void doLEDs(unsigned int delay) {
+  byte * first_digit;
+  byte * second_digit;
 
   // overwrite image based on priority
-  if (conditions.indexOf("Sunny") >= 0) image = weather_clear;
-  if (conditions.indexOf("Cloudy") >= 0) image = weather_bkn;
-  if (conditions.indexOf("Mostly Sunny") >= 0) image = weather_few;
-  if (conditions.indexOf("Party Cloudy") >= 0) image = weather_sct;
-  if (conditions.indexOf("Partly Sunny") >= 0) image = weather_bkn;
-  if (conditions.indexOf("Mostly Cloudy") >= 0) image = weather_bkn;
-  if (conditions.indexOf("Smoke") >= 0) image = weather_mist;
-  if (conditions.indexOf("Haze") >= 0) image = weather_mist;
-  if (conditions.indexOf("Rain") >= 0) image = weather_rain;
-  if (conditions.indexOf("Showers") >= 0) image = weather_shower;
-  if (conditions.indexOf("Snow") >= 0) image = weather_snow;
-  if (conditions.indexOf("Thunderstorm") >= 0) image = weather_thunderstorm;
+  byte IMAGES[][8] = {
+  {
+    B00010000,
+    B00110000,
+    B00010000,
+    B00010000,
+    B00010000,
+    B00010000,
+    B00010000,
+    B00111000
+  },{
+    B00111000,
+    B01000100,
+    B00000100,
+    B00000100,
+    B00001000,
+    B00010000,
+    B00100000,
+    B01111100
+  },{
+    B00111000,
+    B01000100,
+    B00000100,
+    B00011000,
+    B00000100,
+    B00000100,
+    B01000100,
+    B00111000
+  },{
+    B00000100,
+    B00001100,
+    B00010100,
+    B00100100,
+    B01000100,
+    B01111100,
+    B00000100,
+    B00000100
+  },{
+    B01111100,
+    B01000000,
+    B01000000,
+    B01111000,
+    B00000100,
+    B00000100,
+    B01000100,
+    B00111000
+  },{
+    B00111000,
+    B01000100,
+    B01000000,
+    B01111000,
+    B01000100,
+    B01000100,
+    B01000100,
+    B00111000
+  },{
+    B01111100,
+    B00000100,
+    B00000100,
+    B00001000,
+    B00010000,
+    B00100000,
+    B00100000,
+    B00100000
+  },{
+    B00111000,
+    B01000100,
+    B01000100,
+    B00111000,
+    B01000100,
+    B01000100,
+    B01000100,
+    B00111000
+  },{
+    B00111000,
+    B01000100,
+    B01000100,
+    B01000100,
+    B00111100,
+    B00000100,
+    B01000100,
+    B00111000
+  },{
+    B00111000,
+    B01000100,
+    B01000100,
+    B01000100,
+    B01000100,
+    B01000100,
+    B01000100,
+    B00111000
+  },{
+    B00000000,
+    B00000000,
+    B00000000,
+    B00000000,
+    B00000000,
+    B00000000,
+    B00000000,
+    B00000000
+  }};
+
+  if (delay >= 100) {
+    first_digit = IMAGES[9];
+    second_digit = IMAGES[9];
+  } else if (delay < 10) {
+    first_digit = IMAGES[11];
+    second_digit = IMAGES[delay];
+  } else {
+    unsigned short int ones = (delay%10);
+    unsigned short int tens = ((delay/10)%10);
+    first_digit = IMAGES[tens];
+    second_digit = IMAGES[ones];
+  }
 
   CRGB color;
 
-  color = getColor(temp);
-  draw(city, color, image);
+  color = getColor(delay);
+  draw(0, color, first_digit);
+  draw(1, color, second_digit);
   FastLED.show();
 }
 
-String getWeatherData(String url) {
-  String payload = "{\"periods\": [";
+unsigned short int parseDelay(String delayString) {
+  unsigned short int hours;
+  unsigned short int minutes;
+  if (delayString.indexOf("hour") != -1) {
+    hours = delayString.substring(0, delayString.indexOf("hour") - 1).toInt();
+    Serial.print(hours);
+    Serial.println(" hours");
+  } else hours = 0;
+  if (delayString.indexOf("minute") != -1) {
+    minutes = delayString.substring(delayString.indexOf("minute") - 3, delayString.indexOf("minute") -1).toInt();
+    Serial.print(minutes);
+    Serial.println(" minutes");
+  } else minutes = 0;
+  return hours * 60 + minutes;
+}
+
+int getDelay(String url) {
   uint32_t t;
   char c;
 
@@ -145,7 +240,7 @@ String getWeatherData(String url) {
   if (!client.connect(HOST, 443)) {
     Serial.println("Connection failed!");
     client.stop();
-    return "E";
+    return -1;
   } else {
   /*  Serial.println("Connected ...");
     Serial.print("GET ");
@@ -164,7 +259,7 @@ String getWeatherData(String url) {
     client.print("Host: ");
     client.println(HOST);
     client.println("User-Agent: Weather Clock client - contact kyle@kyleharmon.com");
-    client.println("Accept: application/ld+json");
+    //client.println("Accept: application/ld+json");
     client.println("Connection: close");
     client.println();
     client.flush();
@@ -176,15 +271,20 @@ String getWeatherData(String url) {
       if ((millis() - t) >= (READ_TIMEOUT * 1000)) {
         Serial.println("---Timeout---");
         client.stop();
-        return "E";
+        return -1;
       }
       Serial.print(".");
       delay(1000);
     }
 
-    unsigned short int elementCount = 0;
     String currentLine = "";
     bool readingData = false;
+    bool readingMaxDelay = false;
+    bool readingAvgDelay = false;
+    unsigned int highestMaxDelay = 0;
+    unsigned int highestAvgDelay = 0;
+    String avgDelay;
+    String maxDelay;
 
     while (client.connected()) {
       if ((c = client.read()) >= 0) {
@@ -192,76 +292,94 @@ String getWeatherData(String url) {
         if (c == '\n') {
           currentLine = "";
         }
-        if (currentLine.endsWith("\"periods\": [")) {
+        if (currentLine.endsWith("SFO</ARPT>")) {
           readingData = true;
-        } else if (readingData) {
-          payload += c;
-          if (currentLine.endsWith("}")) elementCount++;
         }
-        if (elementCount >= 3) {
-          client.stop();
-          payload += "]}";
-          return payload;
-        }; // stop after we have three elements
 
+        // Look for max delay and save it
+        if (readingData && currentLine.endsWith("<Max>")) {
+          Serial.println("Found a max delay");
+          readingMaxDelay = true;
+        }
+        if (readingMaxDelay && currentLine.endsWith("<")) {
+          readingMaxDelay = false;
+          unsigned int currentDelay = parseDelay(maxDelay);
+          if (currentDelay > highestMaxDelay) highestMaxDelay = currentDelay;
+          maxDelay = "";
+        }
+        if (readingMaxDelay) {
+          maxDelay += c;
+        } 
+
+        // Now do the same for Average delay
+        if (readingData && currentLine.endsWith("<Avg>")) {
+          Serial.println("Found an avg delay");
+          readingAvgDelay = true;
+        }
+        if (readingAvgDelay && currentLine.endsWith("<")) {
+          readingAvgDelay = false;
+          unsigned int currentDelay = parseDelay(avgDelay);
+          if (currentDelay > highestAvgDelay) highestAvgDelay = currentDelay;
+          avgDelay = "";
+        }
+        if (readingAvgDelay) {
+          avgDelay += c;
+        } 
+        if (currentLine.endsWith("</Delay>")) {
+          readingData = false;
+          readingMaxDelay = false;
+          readingAvgDelay = false;
+        }
         t = millis(); // Reset timeout clock
       } else if ((millis() - t) >= (READ_TIMEOUT * 1000)) {
         Serial.println("---Timeout---");
         client.stop();
-        return "E";
+        return -1;
       }
     }
-  }
-  return "E";
-}
-
-void parsePaket(JsonObject& liste) {
-  temp = liste["temperature"]; // 20.31
-  Serial.print("Temp: ");
-  Serial.print(temp);
-
-  conditions = liste["shortForecast"].as<char*>();
-  Serial.print(" Conditions: ");
-  Serial.println(conditions);
-}
-
-void decodeWeather(String JSONline) {
-  const size_t bufferSize = JSON_ARRAY_SIZE(3) + JSON_OBJECT_SIZE(1) + 3*JSON_OBJECT_SIZE(13) + 1370;
-  DynamicJsonBuffer jsonBuffer(bufferSize);
-  const char* json = JSONline.c_str();
-  JsonObject& root = jsonBuffer.parseObject(json);
-  JsonArray& list = root["periods"];
-  for (int i = 0; i < list.size(); i++) {
-    if (list[i]["isDaytime"]) {
-      parsePaket(list[i]);
-      break; // exit loop once we find a daytime
+    if (highestAvgDelay > 0) {
+      Serial.print("Returning AVG delay of ");
+      Serial.print(highestAvgDelay);
+      Serial.println(" minutes");
+      return highestAvgDelay;
+    } else if (highestMaxDelay > 0) {
+      Serial.print("Returning MAX delay of ");
+      Serial.print(highestMaxDelay);
+      Serial.println(" minutes");
+      return highestMaxDelay;
+    } else { 
+      Serial.println("Returning no delay.");
+      return 0;
     }
   }
+  return -1;
 }
 
 void loop() {
   // set LED brightness
-  float reading;
-  byte brightness;
+  if (BRIGHTNESS_INTERVAL > 0) {
+    float reading;
+    byte brightness;
 
-  reading = analogRead(LIGHTSENSORPIN);
+    reading = analogRead(LIGHTSENSORPIN);
 
-  Serial.print("Light reading: ");
-  Serial.print(reading);
-  Serial.print(" raw, ");
+    Serial.print("Light reading: ");
+    Serial.print(reading);
+    Serial.print(" raw, ");
 
-  if (reading <= MIN_LUX) brightness = 0;
-  else if (reading >= MAX_LUX) brightness = MAX_BRIGHTNESS;
-  else {
-    // Percentage in lux range * brightness range + min brightness
-    float brightness_percent = (reading - MIN_LUX) / (MAX_LUX - MIN_LUX);
-    brightness = brightness_percent * (MAX_BRIGHTNESS - MIN_BRIGHTNESS) + MIN_BRIGHTNESS;
+    if (reading <= MIN_LUX) brightness = 0;
+    else if (reading >= MAX_LUX) brightness = MAX_BRIGHTNESS;
+    else {
+      // Percentage in lux range * brightness range + min brightness
+      float brightness_percent = (reading - MIN_LUX) / (MAX_LUX - MIN_LUX);
+      brightness = brightness_percent * (MAX_BRIGHTNESS - MIN_BRIGHTNESS) + MIN_BRIGHTNESS;
+    }
+
+    Serial.print(brightness);
+    Serial.println(" brightness");
+    FastLED.setBrightness(brightness);
+    FastLED.show();
   }
-
-  Serial.print(brightness);
-  Serial.println(" brightness");
-  FastLED.setBrightness(brightness);
-  FastLED.show();
 
     // Connect to WiFi. We always want a wifi connection for the ESP8266
   if (WiFi.status() != WL_CONNECTED) {
@@ -285,31 +403,22 @@ void loop() {
     Serial.println("OK!");
   }
 
-  if (loop_number > (REQUEST_INTERVAL / BRIGHTNESS_INTERVAL) || loop_number == 0) { // Do the new request at certain intervals
-    Serial.println("Starting weather request.");
+  if (loop_number > (REQUEST_INTERVAL / BRIGHTNESS_INTERVAL) || loop_number == 0 || BRIGHTNESS_INTERVAL == 0) { // Do the new request at certain intervals
+    Serial.println("Starting delay request.");
     fill_solid(leds, NUM_LEDS, CRGB::Black); // Set everything to black just in case there is no report
 
     // get weather for Alameda
-    String weather;
-    Serial.println("--- Alameda ---");
-    weather = getWeatherData(ALAMEDA_URI);
-    if (weather[0] != 'E') {
-      decodeWeather(weather);
-      doLEDs(0); // 0 for Alameda
-    }
-
-    // now repeat for SF
-    Serial.println("--- San Francisco ---");
-    weather = getWeatherData(SF_URI);
-    if (weather[0] != 'E') {
-      decodeWeather(weather);
-      doLEDs(1); // 1 for SF
+    int delay;
+    delay = getDelay(URI);
+    if (delay != -1) {
+      doLEDs(delay); // 0 for Alameda
     }
 
     FastLED.show();
-    loop_number = 0;
+    if (BRIGHTNESS_INTERVAL > 0) loop_number = 0;
   }
 
-  loop_number++;
-  delay(BRIGHTNESS_INTERVAL);
+  if (BRIGHTNESS_INTERVAL > 0) loop_number++;
+  if (BRIGHTNESS_INTERVAL > 0) delay(BRIGHTNESS_INTERVAL);
+  else delay(REQUEST_INTERVAL);
 }
