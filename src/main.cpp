@@ -339,7 +339,7 @@ int getDelay(String url) {
     }
     
     client.stop();
-    
+
     if (highestAvgDelay > 0) {
       Serial.print("Returning AVG delay of ");
       Serial.print(highestAvgDelay);
@@ -387,7 +387,7 @@ void loop() {
     // Connect to WiFi. We always want a wifi connection for the ESP8266
   if (WiFi.status() != WL_CONNECTED) {
     WiFi.mode(WIFI_STA);
-    WiFi.hostname("Weather Clock " + WiFi.macAddress());
+    WiFi.hostname("Kyle's SFO Meter " + WiFi.macAddress());
     Serial.print("WiFi connecting..");
     WiFi.begin(ssid, pass);
 
@@ -410,11 +410,11 @@ void loop() {
     Serial.println("Starting delay request.");
     fill_solid(leds, NUM_LEDS, CRGB::Black); // Set everything to black just in case there is no report
 
-    // get weather for Alameda
+    // dget delay
     int delay;
     delay = getDelay(URI);
     if (delay != -1) {
-      doLEDs(delay); // 0 for Alameda
+      doLEDs(delay);
     }
 
     FastLED.show();
