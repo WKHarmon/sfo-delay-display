@@ -337,6 +337,9 @@ int getDelay(String url) {
         return -1;
       }
     }
+    
+    client.stop();
+    
     if (highestAvgDelay > 0) {
       Serial.print("Returning AVG delay of ");
       Serial.print(highestAvgDelay);
