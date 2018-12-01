@@ -15,7 +15,7 @@ const char pass[] = "EDITME";    // your network password (use for WPA, or use a
 #define LIGHTSENSORPIN A0 //Ambient light sensor reading 
 #define DATA_PIN 5
 #define LED_TYPE WS2812
-#define COLOR_ORDER RGB
+#define COLOR_ORDER GRB
 #define MAX_BRIGHTNESS 20
 #define MIN_BRIGHTNESS 3
 #define MIN_LUX 10 // not really lux, we're using a raw sensor reading, maybe 15
@@ -51,14 +51,14 @@ void draw(byte digit, CRGB color, byte * image){
   else if (digit == 1) led = 64;
 
   for (byte i = 0; i < 8; i++) {
-    for (byte a = 0; a < 8; a++) {
+    for (byte a = 8; a > 0; a--) {
       if (image[i] >> a & 0x01) leds[led] = color;
       led++;
     }
   }
 }
 
-CRGB getColor(float delay) {
+CRGB getColor(int delay) {
   CRGB color;
 
   // FastLED gradients crash the ESP8266 so we have to do it manually. There's probably a math function I'm too lazy to look up.
@@ -67,11 +67,6 @@ CRGB getColor(float delay) {
   /*CRGBPalette16 temp_palette = temperature_gradient;*/
 
   if (delay == 0) color = 0x00FF00;
-  /*else if (highTemp > 90) color = 0xFF0000;
-  else {
-    uint8_t colorIndex = ((highTemp - 40) / 50) * 255;
-    color = ColorFromPalette(temp_palette, colorIndex);
-  }*/
   else if (delay <= 10) color = 0x38FF00;
   else if (delay <= 20) color = 0x71FF00;
   else if (delay <= 30) color = 0xAAFF00;
@@ -92,6 +87,15 @@ void doLEDs(unsigned int delay) {
   // overwrite image based on priority
   byte IMAGES[][8] = {
   {
+    B00111000,
+    B01000100,
+    B01000100,
+    B01000100,
+    B01000100,
+    B01000100,
+    B01000100,
+    B00111000
+  },{
     B00010000,
     B00110000,
     B00010000,
@@ -173,15 +177,6 @@ void doLEDs(unsigned int delay) {
     B01000100,
     B00111000
   },{
-    B00111000,
-    B01000100,
-    B01000100,
-    B01000100,
-    B01000100,
-    B01000100,
-    B01000100,
-    B00111000
-  },{
     B00000000,
     B00000000,
     B00000000,
@@ -196,7 +191,7 @@ void doLEDs(unsigned int delay) {
     first_digit = IMAGES[9];
     second_digit = IMAGES[9];
   } else if (delay < 10) {
-    first_digit = IMAGES[11];
+    first_digit = IMAGES[10];
     second_digit = IMAGES[delay];
   } else {
     unsigned short int ones = (delay%10);
