@@ -9,7 +9,7 @@ const char pass[] = "EDITME";    // your network password (use for WPA, or use a
 #define WIFI_TIMEOUT 60 // in seconds
 #define RETRY_TIMEOUT 15000 // in ms
 #define REQUEST_INTERVAL 900000 // in ms (15 miunutes is 900000)
-#define BRIGHTNESS_INTERVAL 0 // interval at which to adjust brightness in ms; set to 0 to disable sensor readings
+#define BRIGHTNESS_INTERVAL 5000 // interval at which to adjust brightness in ms; set to 0 to disable sensor readings
 
 #define FASTLED_ESP8266_RAW_PIN_ORDER
 #define LIGHTSENSORPIN A0 //Ambient light sensor reading 
@@ -17,8 +17,8 @@ const char pass[] = "EDITME";    // your network password (use for WPA, or use a
 #define LED_TYPE WS2812
 #define COLOR_ORDER GRB
 #define MAX_BRIGHTNESS 20
-#define MIN_BRIGHTNESS 3
-#define MIN_LUX 10 // not really lux, we're using a raw sensor reading, maybe 15
+#define MIN_BRIGHTNESS 5
+#define MIN_LUX 100 // not really lux, we're using a raw sensor reading, maybe 15
 #define MAX_LUX 250
 #define NUM_LEDS 128
 CRGB leds[NUM_LEDS];
@@ -52,7 +52,7 @@ void draw(byte digit, CRGB color, byte * image){
 
   for (byte i = 0; i < 8; i++) {
     for (byte a = 8; a > 0; a--) {
-      if (image[i] >> a & 0x01) leds[led] = color;
+      if (image[i] >> a - 1 & 0x01) leds[led] = color;
       led++;
     }
   }
@@ -86,7 +86,7 @@ void doLEDs(unsigned int delay) {
 
   // overwrite image based on priority
   byte IMAGES[][8] = {
-  {
+  { // 0 thru 9 normal
     B00111000,
     B01000100,
     B01000100,
@@ -176,7 +176,97 @@ void doLEDs(unsigned int delay) {
     B00000100,
     B01000100,
     B00111000
+  },{ // 0 thru 9 with a decimal point, index starts at 10
+    B01110000,
+    B10001000,
+    B10001000,
+    B10001000,
+    B10001000,
+    B10001000,
+    B10001011,
+    B01110011
   },{
+    B00100000,
+    B01100000,
+    B00100000,
+    B00100000,
+    B00100000,
+    B00100000,
+    B00100011,
+    B01110011
+  },{
+    B01110000,
+    B10001000,
+    B00001000,
+    B00001000,
+    B00010000,
+    B00100000,
+    B01000011,
+    B11111011
+  },{
+    B01110000,
+    B10001000,
+    B00001000,
+    B00110000,
+    B00001000,
+    B00001000,
+    B10001011,
+    B01110011
+  },{
+    B00001000,
+    B00011000,
+    B00101000,
+    B01001000,
+    B10001000,
+    B11111000,
+    B00001011,
+    B00001011
+  },{
+    B11111000,
+    B10000000,
+    B10000000,
+    B11110000,
+    B00001000,
+    B00001000,
+    B10001011,
+    B01110011
+  },{
+    B01110000,
+    B10001000,
+    B10000000,
+    B11110000,
+    B10001000,
+    B10001000,
+    B10001011,
+    B01110011
+  },{
+    B11111000,
+    B00001000,
+    B00001000,
+    B00010000,
+    B00100000,
+    B01000000,
+    B01000011,
+    B01000011
+  },{
+    B01110000,
+    B10001000,
+    B10001000,
+    B01110000,
+    B10001000,
+    B10001000,
+    B10001011,
+    B01110011
+  },{
+    B01110000,
+    B10001000,
+    B10001000,
+    B10001000,
+    B01111000,
+    B00001000,
+    B10001011,
+    B01110011
+  },{ // blank - index is 20
     B00000000,
     B00000000,
     B00000000,
@@ -188,10 +278,15 @@ void doLEDs(unsigned int delay) {
   }};
 
   if (delay >= 100) {
-    first_digit = IMAGES[9];
-    second_digit = IMAGES[9];
+    // Switch to hours
+    // Convert minutes hours, round to the nearest tenth of an hour, then multiply by 10 to get a 2 digit number
+    unsigned short int decimal_delay = int((((float)delay / 60) * 10) + 0.5);
+    unsigned short int ones = (decimal_delay%10);
+    unsigned short int tens = ((decimal_delay/10)%10) + 10;
+    first_digit = IMAGES[tens];
+    second_digit = IMAGES[ones];
   } else if (delay < 10) {
-    first_digit = IMAGES[10];
+    first_digit = IMAGES[20];
     second_digit = IMAGES[delay];
   } else {
     unsigned short int ones = (delay%10);
