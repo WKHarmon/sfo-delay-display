@@ -307,7 +307,7 @@ unsigned short int parseDelay(String delayString) {
   unsigned short int hours;
   unsigned short int minutes;
   if (delayString.indexOf("hour") != -1) {
-    hours = delayString.substring(0, delayString.indexOf("hour") - 1).toInt();
+    hours = delayString.substring(1, delayString.indexOf("hour") - 1).toInt();
     Serial.print(hours);
     Serial.println(" hours");
   } else hours = 0;
