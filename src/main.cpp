@@ -41,7 +41,7 @@ void setup() {
   if (BRIGHTNESS_INTERVAL > 0) pinMode(LIGHTSENSORPIN, INPUT);
   FastLED.addLeds<LED_TYPE,DATA_PIN,COLOR_ORDER>(leds, NUM_LEDS).setCorrection(TypicalLEDStrip);
   FastLED.setBrightness(MAX_BRIGHTNESS);
-  fill_gradient_RGB(leds, NUM_LEDS, CRGB::Blue, CRGB::Red);
+  fill_gradient_RGB(leds, NUM_LEDS, CRGB::Green, CRGB::Red);
   FastLED.show();
 }
 
@@ -416,6 +416,11 @@ int getDelay(String url) {
           avgDelay += c;
         } 
         if (currentLine.endsWith("</Delay>")) {
+          readingData = false;
+          readingMaxDelay = false;
+          readingAvgDelay = false;
+        }
+        if (currentLine.endsWith("</Ground_Delay>")) {
           readingData = false;
           readingMaxDelay = false;
           readingAvgDelay = false;
