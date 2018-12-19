@@ -85,7 +85,199 @@ void doLEDs(unsigned int delay) {
   byte * second_digit;
 
   // overwrite image based on priority
-  byte IMAGES[][8] = {
+  byte LEFT_IMAGE[][8] = {
+  { // 0 thru 9 normal
+    B00011100,
+    B00100010,
+    B00100010,
+    B00100010,
+    B00100010,
+    B00100010,
+    B00100010,
+    B00011100
+  },{
+    B00001000,
+    B00011000,
+    B00001000,
+    B00001000,
+    B00001000,
+    B00001000,
+    B00001000,
+    B00011100
+  },{
+    B00011100,
+    B00100010,
+    B00000010,
+    B00000010,
+    B00000100,
+    B00001000,
+    B00010000,
+    B00111110
+  },{
+    B00011100,
+    B00100010,
+    B00000010,
+    B00001100,
+    B00000010,
+    B00000010,
+    B00100010,
+    B00011100
+  },{
+    B00000010,
+    B00000110,
+    B00001010,
+    B00010010,
+    B00100010,
+    B00111110,
+    B00000010,
+    B00000010
+  },{
+    B00111110,
+    B00100000,
+    B00100000,
+    B00111100,
+    B00000010,
+    B00000010,
+    B00100010,
+    B00011100
+  },{
+    B00011100,
+    B00100010,
+    B00100000,
+    B00111100,
+    B00100010,
+    B00100010,
+    B00100010,
+    B00011100
+  },{
+    B00111110,
+    B00000010,
+    B00000010,
+    B00000100,
+    B00001000,
+    B00010000,
+    B00010000,
+    B00010000
+  },{
+    B00011100,
+    B00100010,
+    B00100010,
+    B00011100,
+    B00100010,
+    B00100010,
+    B00100010,
+    B00011100
+  },{
+    B00011100,
+    B00100010,
+    B00100010,
+    B00100010,
+    B00011110,
+    B00000010,
+    B00100010,
+    B00011100
+  },{ // 0 thru 9 with a decimal point, index starts at 10
+    B01110000,
+    B10001000,
+    B10001000,
+    B10001000,
+    B10001000,
+    B10001000,
+    B10001011,
+    B01110011
+  },{
+    B00100000,
+    B01100000,
+    B00100000,
+    B00100000,
+    B00100000,
+    B00100000,
+    B00100011,
+    B01110011
+  },{
+    B01110000,
+    B10001000,
+    B00001000,
+    B00001000,
+    B00010000,
+    B00100000,
+    B01000011,
+    B11111011
+  },{
+    B01110000,
+    B10001000,
+    B00001000,
+    B00110000,
+    B00001000,
+    B00001000,
+    B10001011,
+    B01110011
+  },{
+    B00001000,
+    B00011000,
+    B00101000,
+    B01001000,
+    B10001000,
+    B11111000,
+    B00001011,
+    B00001011
+  },{
+    B11111000,
+    B10000000,
+    B10000000,
+    B11110000,
+    B00001000,
+    B00001000,
+    B10001011,
+    B01110011
+  },{
+    B01110000,
+    B10001000,
+    B10000000,
+    B11110000,
+    B10001000,
+    B10001000,
+    B10001011,
+    B01110011
+  },{
+    B11111000,
+    B00001000,
+    B00001000,
+    B00010000,
+    B00100000,
+    B01000000,
+    B01000011,
+    B01000011
+  },{
+    B01110000,
+    B10001000,
+    B10001000,
+    B01110000,
+    B10001000,
+    B10001000,
+    B10001011,
+    B01110011
+  },{
+    B01110000,
+    B10001000,
+    B10001000,
+    B10001000,
+    B01111000,
+    B00001000,
+    B10001011,
+    B01110011
+  },{ // blank - index is 20
+    B00000000,
+    B00000000,
+    B00000000,
+    B00000000,
+    B00000000,
+    B00000000,
+    B00000000,
+    B00000000
+  }};
+
+  byte RIGHT_IMAGE[][8] = {
   { // 0 thru 9 normal
     B00111000,
     B01000100,
@@ -283,16 +475,16 @@ void doLEDs(unsigned int delay) {
     unsigned short int decimal_delay = int((((float)delay / 60) * 10) + 0.5);
     unsigned short int ones = (decimal_delay%10);
     unsigned short int tens = ((decimal_delay/10)%10) + 10;
-    first_digit = IMAGES[tens];
-    second_digit = IMAGES[ones];
+    first_digit = LEFT_IMAGE[tens];
+    second_digit = RIGHT_IMAGE[ones];
   } else if (delay < 10) {
-    first_digit = IMAGES[20];
-    second_digit = IMAGES[delay];
+    first_digit = LEFT_IMAGE[20];
+    second_digit = RIGHT_IMAGE[delay];
   } else {
     unsigned short int ones = (delay%10);
     unsigned short int tens = ((delay/10)%10);
-    first_digit = IMAGES[tens];
-    second_digit = IMAGES[ones];
+    first_digit = LEFT_IMAGE[tens];
+    second_digit = RIGHT_IMAGE[ones];
   }
 
   CRGB color;
@@ -415,12 +607,7 @@ int getDelay(String url) {
         if (readingAvgDelay) {
           avgDelay += c;
         } 
-        if (currentLine.endsWith("</Delay>")) {
-          readingData = false;
-          readingMaxDelay = false;
-          readingAvgDelay = false;
-        }
-        if (currentLine.endsWith("</Ground_Delay>")) {
+        if (currentLine.endsWith("</Delay>") || currentLine.endsWith("</Ground_Delay>") || currentLine.endsWith("</Ground_Stop_List>")) {
           readingData = false;
           readingMaxDelay = false;
           readingAvgDelay = false;
