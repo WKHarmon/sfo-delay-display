@@ -515,7 +515,8 @@ int getDelay(String url) {
   uint32_t t;
   char c;
 
-  WiFiClientSecure client;
+  BearSSL::WiFiClientSecure client;
+  client.setInsecure();
 
   //Serial.println("\nStarting connection to server...");
   // if you get a connection, report back via serial:
@@ -570,6 +571,7 @@ int getDelay(String url) {
 
     while (client.connected()) {
       if ((c = client.read()) >= 0) {
+        yield();
         currentLine += c;
         if (c == '\n') {
           currentLine = "";
