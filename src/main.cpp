@@ -66,7 +66,8 @@ CRGB getColor(int delay) {
 
   /*CRGBPalette16 temp_palette = temperature_gradient;*/
 
-  if (delay == 0) color = 0x00FF00;
+  if (delay == -2) color = 0xFF0000;
+  else if (delay == 0) color = 0x00FF00;
   else if (delay <= 10) color = 0x38FF00;
   else if (delay <= 20) color = 0x71FF00;
   else if (delay <= 30) color = 0xAAFF00;
