@@ -80,7 +80,7 @@ CRGB getColor(int delay) {
   return color;
 }
 
-void doLEDs(unsigned int delay) {
+void doLEDs(int delay) {
   byte * first_digit;
   byte * second_digit;
 
@@ -275,6 +275,15 @@ void doLEDs(unsigned int delay) {
     B00000000,
     B00000000,
     B00000000
+  },{ // X - index is 21
+    B10000001,
+    B01000010,
+    B00100100,
+    B00011000,
+    B00011000,
+    B00100100,
+    B01000010,
+    B10000001
   }};
 
   byte RIGHT_IMAGE[][8] = {
@@ -467,9 +476,21 @@ void doLEDs(unsigned int delay) {
     B00000000,
     B00000000,
     B00000000
+  },{ // X - index is 21
+    B10000001,
+    B01000010,
+    B00100100,
+    B00011000,
+    B00011000,
+    B00100100,
+    B01000010,
+    B10000001
   }};
 
-  if (delay >= 100) {
+  if (delay == -2) {
+    first_digit = LEFT_IMAGE[21];
+    second_digit = RIGHT_IMAGE[21];
+  } else if (delay >= 100) {
     // Switch to hours
     // Convert minutes hours, round to the nearest tenth of an hour, then multiply by 10 to get a 2 digit number
     unsigned short int decimal_delay = int((((float)delay / 60) * 10) + 0.5);
@@ -564,6 +585,7 @@ int getDelay(String url) {
     bool readingData = false;
     bool readingMaxDelay = false;
     bool readingAvgDelay = false;
+    bool airportClosed = false;
     unsigned int highestMaxDelay = 0;
     unsigned int highestAvgDelay = 0;
     String avgDelay;
@@ -578,6 +600,10 @@ int getDelay(String url) {
         }
         if (currentLine.endsWith("SFO</ARPT>")) {
           readingData = true;
+        }
+
+        if (readingData && currentLine.endsWith("</Airport>")) { // </Airport> only appears if it is closed
+          airportClosed = true;
         }
 
         // Look for max delay and save it
@@ -609,7 +635,7 @@ int getDelay(String url) {
         if (readingAvgDelay) {
           avgDelay += c;
         } 
-        if (currentLine.endsWith("</Delay>") || currentLine.endsWith("</Ground_Delay>") || currentLine.endsWith("</Ground_Stop_List>")) {
+        if (currentLine.endsWith("</Delay>") || currentLine.endsWith("</Ground_Delay>") || currentLine.endsWith("</Program>") || currentLine.endsWith("</Airport>")) {
           readingData = false;
           readingMaxDelay = false;
           readingAvgDelay = false;
@@ -624,7 +650,10 @@ int getDelay(String url) {
     
     client.stop();
 
-    if (highestAvgDelay > 0) {
+    if (airportClosed == true) {
+      Serial.println("Airport is closed.");
+      return -2;
+    } else if (highestAvgDelay > 0) {
       Serial.print("Returning AVG delay of ");
       Serial.print(highestAvgDelay);
       Serial.println(" minutes");
