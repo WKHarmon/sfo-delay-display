@@ -26,8 +26,8 @@ CRGB leds[NUM_LEDS];
 short int temp;
 String conditions;
 
-#define HOST "www.fly.faa.gov"
-#define URI "/flyfaa/xmlAirportStatus.jsp"
+#define HOST "nasstatus.faa.gov"
+#define URI "/api/airport-status-information"
 
 unsigned int loop_number = 0;
 
